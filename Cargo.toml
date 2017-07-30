@@ -1,0 +1,6 @@
+[package]
+name = "vinegar"
+version = "0.1.0"
+authors = ["renato <renato@twobo.com>"]
+
+[dependencies]
