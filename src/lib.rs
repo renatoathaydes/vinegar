@@ -27,8 +27,7 @@ mod tests {
             (3, 6),
         ];
 
-        check(examples.iter().map(|&ex| {
-            let (input, expected) = ex;
+        check(examples.iter().map(|&(input, expected)| {
             let result = input * 2;
             expect_eq!(result, expected)
         }));
