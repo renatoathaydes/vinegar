@@ -1,6 +1,12 @@
 [package]
 name = "vinegar"
+description = "A collection of functions and macros to help testing Rust code"
 version = "0.1.0"
 authors = ["renato <renato@twobo.com>"]
+repository = "https://github.com/renatoathaydes/vinegar"
+readme = "README.md"
+keywords = [ "test", "bdd", "tdd" ]
+categories = [ "development-tools::testing" ]
+license = "Apache-2.0"
 
 [dependencies]
