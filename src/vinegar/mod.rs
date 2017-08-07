@@ -4,7 +4,7 @@ pub fn check<I>(expects: I)
 
     for (index, expect) in expects.into_iter().enumerate() {
         if let Err(err) = expect {
-            failures.push(format!("iteration[{}] {}", index, err));
+            failures.push(format!("iteration[{}]:\n{}", index, err));
         }
     }
 
@@ -15,13 +15,31 @@ pub fn check<I>(expects: I)
 
 #[macro_export]
 macro_rules! expect {
+
+  (|| $b:block $($a:tt)+) => {{
+      if $b $($a)* {
+          Result::Ok(())
+      } else {
+          let bs = format!("{:?}", $b);
+          let be = stringify!($b);
+          let spaces =        "                    ";
+          let underlines = "-".repeat(be.len());
+          let arrow_line_spaces = " ".repeat(be.len() / 2);
+          let arrow_line = format!("{}{}|", spaces, arrow_line_spaces);
+          let val_line = format!("{}{}{}", spaces, arrow_line_spaces, bs);
+          Result::Err(format!("* Condition failed: {} {}\n{}{}\n{}\n{}\n",
+            be, stringify!($($a)*), spaces, underlines, arrow_line, val_line))
+      }
+  }};
+
   ($($a:tt)*) => {{
       if $($a)* {
           Result::Ok(())
       } else {
           Result::Err(format!("Condition failed: {}", stringify!($($a)*)))
       }
-  }}
+  }};
+
 }
 
 #[macro_export]

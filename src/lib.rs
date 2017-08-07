@@ -45,4 +45,28 @@ mod tests {
             expect_len!(one_to_100, 99),
         ]);
     }
+
+    #[test]
+    fn expect_block() {
+        let one_to_100 = 1..100;
+        check(vec![
+            expect!(|| { one_to_100.len() } > 90),
+            expect!(|| { &one_to_100 }.len() > 90),
+            expect!(|| { 2 + 5 } == 7),
+        ]);
+    }
+
+    #[test]
+    fn expect_block_error() {
+        let one_to_100 = 1..100;
+        if let Err(msg) = expect!(|| { one_to_100.len() } > 1000 ) {
+            assert_eq!("\
+* Condition failed: { one_to_100.len() } > 1000
+                    --------------------
+                              |
+                              99\n", msg);
+        } else {
+            panic!("Should have failed");
+        }
+    }
 }
