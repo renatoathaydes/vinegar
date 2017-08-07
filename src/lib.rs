@@ -32,4 +32,17 @@ mod tests {
             expect_eq!(result, expected)
         }));
     }
+
+    #[test]
+    fn expect_len() {
+        let empty_vec = Vec::<u8>::new();
+        let one_to_100 = 1..100;
+
+        check(vec![
+            expect_len!(empty_vec, 0),
+            expect_len!([1,2,3], 3),
+            expect_len!("hello", 5),
+            expect_len!(one_to_100, 99),
+        ]);
+    }
 }
