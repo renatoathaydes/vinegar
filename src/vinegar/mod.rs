@@ -22,9 +22,11 @@ macro_rules! expect {
       } else {
           let bs = format!("{:?}", $b);
           let be = stringify!($b);
-          let spaces =        "                    ";
-          let underlines = "-".repeat(be.len());
-          let arrow_line_spaces = " ".repeat(be.len() / 2);
+          // quotes are rendered with an escape character, so we need to add to the length
+          let belen = be.len() + be.matches("\"").count();
+          let spaces = "                    ";
+          let underlines = "-".repeat(belen);
+          let arrow_line_spaces = " ".repeat(belen / 2);
           let arrow_line = format!("{}{}|", spaces, arrow_line_spaces);
           let val_line = format!("{}{}{}", spaces, arrow_line_spaces, bs);
           Result::Err(format!("* Condition failed: {} {}\n{}{}\n{}\n{}\n",

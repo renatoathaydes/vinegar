@@ -90,5 +90,25 @@ mod tests {
         } else {
             panic!("Should have failed");
         }
+
+        if let Err(msg) = expect!(|| { one_to_100.len() } < 1 ) {
+            assert_eq!("\
+* Condition failed: { one_to_100.len() } < 1
+                    --------------------
+                              |
+                              99\n", msg);
+        } else {
+            panic!("Should have failed");
+        }
+
+        if let Err(msg) = expect!(|| { "hello".len() } > 25 ) {
+            assert_eq!("\
+* Condition failed: { \"hello\".len() } > 25
+                    -------------------
+                             |
+                             5\n", msg);
+        } else {
+            panic!("Should have failed");
+        }
     }
 }
