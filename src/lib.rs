@@ -47,6 +47,28 @@ mod tests {
     }
 
     #[test]
+    fn expect_len_error() {
+        let empty_vec = Vec::<u8>::new();
+        let one_to_100 = 1..100;
+
+        if let Err(msg) = expect_len!(empty_vec, 3) {
+            assert_eq!("Length of empty_vec is 0, not 3 -- []", msg);
+        } else {
+            panic!("Should have failed");
+        }
+        if let Err(msg) = expect_len!(one_to_100, 66) {
+            assert_eq!("Length of one_to_100 is 99, not 66 -- 1..100", msg);
+        } else {
+            panic!("Should have failed");
+        }
+        if let Err(msg) = expect_len!("hello", 2) {
+            assert_eq!("Length of \"hello\" is 5, not 2 -- \"hello\"", msg);
+        } else {
+            panic!("Should have failed");
+        }
+    }
+
+    #[test]
     fn expect_block() {
         let one_to_100 = 1..100;
         check(vec![

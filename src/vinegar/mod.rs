@@ -66,7 +66,7 @@ macro_rules! expect_len {
           if short_a_str.chars().count() < a_str.chars().count() {
             short_a_str = format!("{}...", short_a_str);
           }
-          Result::Err(format!("Length of {} is {} != {:?} -- {}",
+          Result::Err(format!("Length of {} is {}, not {:?} -- {}",
                 stringify!($a), $a.len(), $b, short_a_str))
       }
   }}
