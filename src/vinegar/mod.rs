@@ -13,8 +13,41 @@ pub fn check<I>(expects: I)
     }
 }
 
+pub fn build_error(bs: &str, be: &str, op: &str, astr: &str, ae: &str) -> String {
+    let spaces = "                    ";
+    // quotes are rendered with an escape character, so we need to add to the length
+    let belen = be.len() + be.matches("\"").count();
+    let be_underlines = "-".repeat(belen);
+    let be_arrow_spaces = " ".repeat(belen / 2);
+
+    let aelen = ae.len() + ae.matches("\"").count();
+    let ae_underlines = "-".repeat(aelen);
+    let ae_arrow_spaces = " ".repeat(aelen / 2);
+
+    let op_spaces = " ".repeat(op.len() + 2);
+
+    let line1 = format!("{}{}{}{}", spaces, be_underlines, op_spaces, ae_underlines);
+    let line2 = format!("{}{}|{}{}{}|",
+                        spaces, be_arrow_spaces, be_arrow_spaces, op_spaces, ae_arrow_spaces);
+    let line3 = format!("{}{}|{}{}{}{}", spaces, be_arrow_spaces, be_arrow_spaces, op_spaces, ae_arrow_spaces, astr);
+    let line4 = format!("{}{}|", spaces, be_arrow_spaces);
+    let val_line = format!("{}{}{}", spaces, be_arrow_spaces, bs);
+    format!("* Condition failed: {} {} {}\n{}\n{}\n{}\n{}\n{}\n",
+            be, op, ae, line1, line2, line3, line4, val_line)
+}
+
 #[macro_export]
 macro_rules! expect {
+
+  (|| $b:block > || $a:block) => {{
+      if $b > $a {
+          Result::Ok(())
+      } else {
+          Result::Err(::vinegar::build_error(
+              &format!("{:?}", $b), stringify!($b), ">",
+              &format!("{:?}", $a), stringify!($a)))
+      }
+  }};
 
   (|| $b:block $($a:tt)+) => {{
       if $b $($a)* {

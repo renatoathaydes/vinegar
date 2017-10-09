@@ -111,4 +111,23 @@ mod tests {
             panic!("Should have failed");
         }
     }
+
+    #[test]
+    fn expect_block_error_with_expr_on_right() {
+        let one_to_100 = 1..100;
+
+        //check(vec![expect!(|| { one_to_100.len() } > || { 2000 + 22 })]);
+
+        if let Err(msg) = expect!(|| { one_to_100.len() } > || { 2000 + 22 }) {
+            assert_eq!("\
+* Condition failed: { one_to_100.len() } > { 2000 + 22 }
+                    --------------------   -------------
+                              |                   |
+                              |                   2022
+                              |
+                              99\n", msg);
+        } else {
+            panic!("Should have failed");
+        }
+    }
 }
