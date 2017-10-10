@@ -1,3 +1,68 @@
+/// The Vinegar crate provides simple constructs to make Rust tests more powerful.
+///
+/// A simple function called `check` is provided to verify the result of the assertion macros.
+///
+/// To use Vinegar in your Rust tests, you just write normal Rust tests, but instead of using the
+/// `assert` and `assert_eq` combo, you use `check` to verify one or more assertion macro calls.
+///
+/// For example:
+///
+/// ```rust
+/// # #[macro_use] extern crate vinegar;
+/// # fn main() {
+/// check(vec![
+///     expect!(2 + 2 == 4),
+///     expect_eq!(2 + 2, 4),
+///     expect!({ 2 + 2 } > 3),
+///     expect!({ 2 + 2 } > { 1 + 1 + 1 })
+/// ]);
+/// # }
+/// ```
+///
+/// Notice that `expect` recognizes not only expressions, but also blocks, on both sides.
+///
+/// The advantages of using `vinegar` over Rust's `assert` are:
+///
+/// * all expectations are always run even if some of them fail.
+/// * much better error messages.
+///
+/// If an expectation fails, specially one using blocks (so the result of the expression
+/// can be computed and shown in the error message), then the error messages are much better
+/// than you get with Rust's `assert`:
+///
+/// For example, this test:
+///
+/// ```rust,should_panic
+/// # #[macro_use] extern crate vinegar;
+/// # fn main() {
+/// check(vec![expect!({ 2 + 2 } < { 1 + 1 + 1 })]);
+/// # }
+/// ```
+///
+/// Fails with this error message:
+///
+/// ```text
+/// iteration[0]:
+/// * Condition failed: { 2 + 2 } < { 1 + 1 + 1 }
+///                     ---------   -------------
+///                         |             |
+///                         |             3
+///                         |
+///                         4
+/// ```
+///
+/// Much better than using `assert`:
+///
+/// ```rust,should_panic
+/// assert!(2 + 2 < 1 + 1 + 1);
+/// ```
+///
+/// Which gives a simpler but much less helpful error message:
+///
+/// ```text
+/// assertion failed: 2 + 2 < 1 + 1 + 1
+/// ```
+///
 #[macro_use]
 pub mod vinegar;
 
