@@ -9,6 +9,7 @@
 ///
 /// ```rust
 /// # #[macro_use] extern crate vinegar;
+/// # use vinegar::vinegar::*;
 /// # fn main() {
 /// check(vec![
 ///     expect!(2 + 2 == 4),
@@ -34,6 +35,7 @@
 ///
 /// ```rust,should_panic
 /// # #[macro_use] extern crate vinegar;
+/// # use vinegar::vinegar::*;
 /// # fn main() {
 /// check(vec![expect!({ 2 + 2 } < { 1 + 1 + 1 })]);
 /// # }

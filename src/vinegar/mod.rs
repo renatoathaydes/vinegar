@@ -43,7 +43,7 @@ macro_rules! expect {
         if $b $op $a {
             Result::Ok(())
         } else {
-            Result::Err(::vinegar::build_error(
+            Result::Err($crate::vinegar::build_error(
                 &format!("{:?}", $b), stringify!($b), stringify!($op),
                 &format!("{:?}", $a), stringify!($a)))
         }
