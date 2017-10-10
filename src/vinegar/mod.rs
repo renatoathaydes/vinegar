@@ -87,23 +87,3 @@ macro_rules! expect_eq {
         }
     }}
 }
-
-#[macro_export]
-macro_rules! expect_len {
-    ($a:expr, $b: expr) => {{
-        use std::cmp::min;
-        if $a.len() == $b {
-            Result::Ok(())
-        } else {
-            let a_str = format!("{:?}", $a);
-            let max_i = min(a_str.chars().count(), 50);
-            let mut short_a_str = a_str[..max_i].to_string();
-            if short_a_str.chars().count() < a_str.chars().count() {
-                short_a_str = format!("{}...", short_a_str);
-            }
-            Result::Err(format!("Length of {} is {}, not {:?} -- {}",
-                stringify!($a), $a.len(), $b, short_a_str))
-      }
-  }}
-}
-
