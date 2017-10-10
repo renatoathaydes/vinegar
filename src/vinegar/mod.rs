@@ -39,12 +39,12 @@ pub fn build_error(bs: &str, be: &str, op: &str, astr: &str, ae: &str) -> String
 #[macro_export]
 macro_rules! expect {
 
-  (|| $b:block > || $a:block) => {{
-      if $b > $a {
+  (|| $b:block $op:tt || $a:block) => {{
+      if $b $op $a {
           Result::Ok(())
       } else {
           Result::Err(::vinegar::build_error(
-              &format!("{:?}", $b), stringify!($b), ">",
+              &format!("{:?}", $b), stringify!($b), stringify!($op),
               &format!("{:?}", $a), stringify!($a)))
       }
   }};
