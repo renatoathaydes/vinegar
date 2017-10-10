@@ -72,16 +72,16 @@ mod tests {
     fn expect_block() {
         let one_to_100 = 1..100;
         check(vec![
-            expect!(|| { one_to_100.len() } > 90),
-            expect!(|| { &one_to_100 }.len() > 90),
-            expect!(|| { 2 + 5 } == 7),
+            expect!({ one_to_100.len() } > 90),
+            expect!({ &one_to_100 }.len() > 90),
+            expect!({ 2 + 5 } == 7),
         ]);
     }
 
     #[test]
     fn expect_block_error() {
         let one_to_100 = 1..100;
-        if let Err(msg) = expect!(|| { one_to_100.len() } > 1000 ) {
+        if let Err(msg) = expect!({ one_to_100.len() } > 1000 ) {
             assert_eq!("\
 * Condition failed: { one_to_100.len() } > 1000
                     --------------------
@@ -91,7 +91,7 @@ mod tests {
             panic!("Should have failed");
         }
 
-        if let Err(msg) = expect!(|| { one_to_100.len() } < 1 ) {
+        if let Err(msg) = expect!({ one_to_100.len() } < 1 ) {
             assert_eq!("\
 * Condition failed: { one_to_100.len() } < 1
                     --------------------
@@ -101,9 +101,19 @@ mod tests {
             panic!("Should have failed");
         }
 
-        if let Err(msg) = expect!(|| { "hello".len() } > 25 ) {
+        if let Err(msg) = expect!({ "hello".len() } > 25 ) {
             assert_eq!("\
 * Condition failed: { \"hello\".len() } > 25
+                    -------------------
+                             |
+                             5\n", msg);
+        } else {
+            panic!("Should have failed");
+        }
+
+        if let Err(msg) = expect!({ "hello".len() } > 5 * 5 ) {
+            assert_eq!("\
+* Condition failed: { \"hello\".len() } > 5 * 5
                     -------------------
                              |
                              5\n", msg);
@@ -116,7 +126,7 @@ mod tests {
     fn expect_block_error_with_expr_on_right() {
         let one_to_100 = 1..100;
 
-        if let Err(msg) = expect!(|| { one_to_100.len() } > || { 2000 + 22 }) {
+        if let Err(msg) = expect!({ one_to_100.len() } > { 2000 + 22 }) {
             assert_eq!("\
 * Condition failed: { one_to_100.len() } > { 2000 + 22 }
                     --------------------   -------------
@@ -128,7 +138,7 @@ mod tests {
             panic!("Should have failed");
         }
 
-        if let Err(msg) = expect!(|| { one_to_100.len() } < || { 3 * 5 + 2 }) {
+        if let Err(msg) = expect!({ one_to_100.len() } < { 3 * 5 + 2 }) {
             assert_eq!("\
 * Condition failed: { one_to_100.len() } < { 3 * 5 + 2 }
                     --------------------   -------------
