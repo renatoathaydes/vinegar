@@ -1,3 +1,6 @@
+extern crate difference;
+extern crate ansi_term;
+
 /// The Vinegar crate provides simple constructs to make Rust tests more powerful.
 ///
 /// A simple function called `check` is provided to verify the result of the assertion macros.
@@ -71,6 +74,8 @@ pub mod vinegar;
 #[cfg(test)]
 mod tests {
     use vinegar::check;
+    use ansi_term::Color::{Red, Green};
+
 
     #[test]
     fn use_check() {
@@ -171,7 +176,7 @@ mod tests {
                               99\n", msg);
         } else {
             panic!("Should have failed");
-        }
+        };
 
         if let Err(msg) = expect!({ one_to_100.len() } < { 3 * 5 + 2 }) {
             assert_eq!("\
@@ -183,6 +188,86 @@ mod tests {
                               99\n", msg);
         } else {
             panic!("Should have failed");
+        }
+    }
+
+    #[test]
+    fn expect_string_eq_error() {
+        if let Err(msg) = expect!({ "hello" } == { "hevvo" }) {
+            assert_eq!(format!("\
+* Condition failed: {{ \"hello\" }} == {{ \"hevvo\" }}
+                    -----------    -----------
+                         |              |
+                         |              hevvo
+                         |
+                         hello
+----- Difference -----
+
+{}
+{}
+
+----------------------\n", Red.paint("-hello"), Green.paint("+hevvo")), msg);
+        } else {
+            panic!("Should have failed");
+        }
+    }
+
+    #[test]
+    fn expect_string_neq_error() {
+        if let Err(msg) = expect!({ "hello" } != { "hello" }) {
+            assert_eq!("\
+* Condition failed: { \"hello\" } != { \"hello\" }
+                    -----------    -----------
+                         |              |
+                         |              hello
+                         |
+                         hello\n", msg);
+        } else {
+            panic!("Should have failed");
+        }
+    }
+
+    #[test]
+    fn expect_long_string_eq_error() {
+        let text1 = "Roses are red, violets are blue,\n\
+               I wrote this library here,\n\
+               just for you.\n\
+               (It's true).";
+
+        let text2 = "Roses are red, violets are blue,\n\
+               I wrote this documentation here,\n\
+               just for you.\n\
+               (It's quite true).";
+
+        //check(vec![expect!({ text1 } == { text2 })]);
+
+        if let Err(msg) = expect!({ text1 } == { text2 }) {
+            assert_eq!(format!("\
+* Condition failed: {{ text1 }} == {{ text2 }}
+                    ---------    ---------
+                        |            |
+                        |            Roses are red, violets are blue,
+I wrote this documentation here,
+just for you.
+(It's quite true).
+                        |
+                        Roses are red, violets are blue,
+I wrote this library here,
+just for you.
+(It's true).
+----- Difference -----
+Roses are red, violets are blue,
+{}
+{}
+just for you.
+{}
+{}
+
+----------------------\n",
+                               Red.paint("-I wrote this library here,"),
+                               Green.paint("+I wrote this documentation here,"),
+                               Red.paint("-(It's true)."),
+                               Green.paint("+(It's quite true).")), msg);
         }
     }
 }

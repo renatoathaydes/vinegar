@@ -11,3 +11,4 @@ license = "Apache-2.0"
 
 [dependencies]
 difference = "0.4"
+ansi_term = "0.10.2"
