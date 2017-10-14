@@ -74,7 +74,7 @@ pub mod vinegar;
 #[cfg(test)]
 mod tests {
     use vinegar::check;
-    use ansi_term::Color::{Red, Green};
+    use ansi_term::Color::{Red, Green, White};
 
 
     #[test]
@@ -193,6 +193,7 @@ mod tests {
 
     #[test]
     fn expect_string_eq_error() {
+        //check(vec![expect!({ "hello" } == { "hevvo" })]);
         if let Err(msg) = expect!({ "hello" } == { "hevvo" }) {
             assert_eq!(format!("\
 * Condition failed: {{ \"hello\" }} == {{ \"hevvo\" }}
@@ -202,11 +203,10 @@ mod tests {
                          |
                          hello
 ----- Difference -----
-
-{}
-{}
-
-----------------------\n", Red.paint("-hello"), Green.paint("+hevvo")), msg);
+{}{}
+{}{}
+----------------------\n", Red.paint("-"), White.on(Red).paint("hello"),
+                               Green.paint("+"), White.on(Green).paint("hevvo")), msg);
         } else {
             panic!("Should have failed");
         }
@@ -239,7 +239,7 @@ mod tests {
                just for you.\n\
                (It's quite true).";
 
-        //check(vec![expect!({ text1 } == { text2 })]);
+        // check(vec![expect!({ text1 } == { text2 })]);
 
         if let Err(msg) = expect!({ text1 } == { text2 }) {
             assert_eq!(format!("\
@@ -262,12 +262,19 @@ Roses are red, violets are blue,
 just for you.
 {}
 {}
-
 ----------------------\n",
-                               Red.paint("-I wrote this library here,"),
-                               Green.paint("+I wrote this documentation here,"),
-                               Red.paint("-(It's true)."),
-                               Green.paint("+(It's quite true).")), msg);
+                               [&Red.paint("-").to_string(), &Red.paint("I wrote this").to_string(), " ",
+                                   &White.on(Red).paint("library").to_string(), " ",
+                                   &Red.paint("here,").to_string()].join(""),
+                               [&Green.paint("+").to_string(), &Green.paint("I wrote this").to_string(), " ",
+                                   &White.on(Green).paint("documentation").to_string(), " ",
+                                   &Green.paint("here,").to_string()].join(""),
+                               [&Red.paint("-").to_string(), &Red.paint("(It's").to_string(),
+                                   " ", &Red.paint("true).").to_string()].join(""),
+                               [&Green.paint("+").to_string(), &Green.paint("(It's").to_string(),
+                                   " ", &White.on(Green).paint("quite").to_string(),
+                                   " ", &Green.paint("true).").to_string()].join(""))
+                       , msg);
         }
     }
 }
