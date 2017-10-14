@@ -247,14 +247,14 @@ mod tests {
                     ---------    ---------
                         |            |
                         |            Roses are red, violets are blue,
-I wrote this documentation here,
-just for you.
-(It's quite true).
+                        |            I wrote this documentation here,
+                        |            just for you.
+                        |            (It's quite true).
                         |
                         Roses are red, violets are blue,
-I wrote this library here,
-just for you.
-(It's true).
+                        I wrote this library here,
+                        just for you.
+                        (It's true).
 ----- Difference -----
 Roses are red, violets are blue,
 {}

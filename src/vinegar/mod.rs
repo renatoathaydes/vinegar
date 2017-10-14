@@ -136,12 +136,21 @@ pub fn internal_build_error(bs: &str, be: &str, op: &str, astr: &str, ae: &str) 
 
     let op_spaces = " ".repeat(op.len() + 2);
 
+    let last_lines_prefix = format!("{}{}", spaces, be_arrow_spaces);
+    let first_lines_prefix = format!("{}|{}{}{}",
+                                     last_lines_prefix, be_arrow_spaces, op_spaces, ae_arrow_spaces);
+
     let line1 = format!("{}{}{}{}", spaces, be_underlines, op_spaces, ae_underlines);
-    let line2 = format!("{}{}|{}{}{}|",
-                        spaces, be_arrow_spaces, be_arrow_spaces, op_spaces, ae_arrow_spaces);
-    let line3 = format!("{}{}|{}{}{}{}", spaces, be_arrow_spaces, be_arrow_spaces, op_spaces, ae_arrow_spaces, astr);
-    let line4 = format!("{}{}|", spaces, be_arrow_spaces);
-    let val_line = format!("{}{}{}", spaces, be_arrow_spaces, bs);
+    let line2 = format!("{}|", first_lines_prefix);
+    let line3 = astr.split('\n')
+        .map(|line| format!("{}{}", first_lines_prefix, line))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let line4 = format!("{}|", last_lines_prefix);
+    let val_line = bs.split('\n')
+        .map(|line| format!("{}{}", last_lines_prefix, line))
+        .collect::<Vec<_>>()
+        .join("\n");
 
     let error_diff = if op == "==" { get_diff(bs, astr) } else { String::new() };
 
