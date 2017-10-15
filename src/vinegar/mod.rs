@@ -1,4 +1,9 @@
 use difference::Changeset;
+use difference::Difference;
+use ansi_term::Colour;
+use ansi_term::Colour::{Green, Red, White};
+use std::string::ToString;
+use std::ops::Deref;
 
 /// Check whether the given expectations have been met successfully.
 ///
@@ -22,11 +27,6 @@ pub fn check<I>(expects: I)
 }
 
 fn get_diff(text1: &str, text2: &str) -> String {
-    use difference::Difference;
-    use ansi_term::Colour::{Green, Red, White};
-    use std::string::ToString;
-    use std::ops::Deref;
-
     enum SecondIteration {
         SkipWithNewLine,
         SkipNoNewLine,
@@ -49,45 +49,21 @@ fn get_diff(text1: &str, text2: &str) -> String {
             Difference::Same(ref x) => if x.is_empty() {
                 second_iteration = SecondIteration::SkipNoNewLine;
             } else {
-                result.push_str(&x.split('\n')
-                    .map(|line| format!(" {}", line))
-                    .collect::<Vec<_>>()
-                    .join("\n"));
+                result.push_str(&line_diff(&x, Option::None, ' '));
                 second_iteration = SecondIteration::SkipWithNewLine;
             },
             Difference::Rem(ref x) => {
-                let x_lines = x.split('\n').collect::<Vec<_>>();
-                if x_lines.len() > 1 {
-                    // several lines included in Rem, show them without line-by-line diff
-                    result.push_str(&x_lines.iter()
-                        .map(|line| Red.paint(format!("-{}", line)).to_string())
-                        .collect::<Vec<_>>()
-                        .join("\n"));
+                if x.contains('\n') {
+                    // several lines included in Rem, show them without word-by-word diff
+                    result.push_str(&line_diff(&x, Option::Some(Red), '-'));
                 } else {
-                    // show single-line diff
+                    // show word-by-word diff
                     match *current {
                         Difference::Add(ref y) => {
-                            let line_diffs = Changeset::new(x, y, " ").diffs;
-                            result.push_str(&Red.paint("-").to_string());
-                            let mut line_diff_parts = Vec::with_capacity(line_diffs.len());
-                            for diff in line_diffs {
-                                match diff {
-                                    Difference::Same(ref z) => if !z.is_empty() {
-                                        line_diff_parts.push(Red.paint(z.deref()).to_string());
-                                    },
-                                    Difference::Rem(ref z) => if !z.is_empty() {
-                                        line_diff_parts.push(White.on(Red).paint(z.deref()).to_string());
-                                    },
-                                    _ => ()
-                                }
-                            }
-                            result.push_str(&line_diff_parts.join(" "));
+                            result.push_str(&word_by_word_diff(x, y, true));
                         }
                         _ => {
-                            result.push_str(&x.split('\n')
-                                .map(|line| Red.paint(format!("-{}", line)).to_string())
-                                .collect::<Vec<_>>()
-                                .join("\n"));
+                            result.push_str(&line_diff(&x, Option::Some(Red), '-'));
                         }
                     }
                 }
@@ -111,38 +87,17 @@ fn get_diff(text1: &str, text2: &str) -> String {
         match *current {
             Difference::Same(_) => (),
             Difference::Add(ref x) => {
-                let x_lines = x.split('\n').collect::<Vec<_>>();
-                if x_lines.len() > 1 {
-                    // several lines included in Rem, show them without line-by-line diff
-                    result.push_str(&x_lines.iter()
-                        .map(|line| Green.paint(format!("+{}", line)).to_string())
-                        .collect::<Vec<_>>()
-                        .join("\n"));
+                if x.contains('\n') {
+                    // several lines included in Rem, show them without word-by-word diff
+                    result.push_str(&line_diff(&x, Option::Some(Green), '+'));
                 } else {
-                    // show single-line diff
+                    // show word-by-word diff
                     match *prev {
                         Difference::Rem(ref y) => {
-                            let line_diffs = Changeset::new(y, x, " ").diffs;
-                            result.push_str(&Green.paint("+").to_string());
-                            let mut line_diff_parts = Vec::with_capacity(line_diffs.len());
-                            for diff in line_diffs {
-                                match diff {
-                                    Difference::Same(ref z) => if !z.is_empty() {
-                                        line_diff_parts.push(Green.paint(z.deref()).to_string());
-                                    },
-                                    Difference::Add(ref z) => if !z.is_empty() {
-                                        line_diff_parts.push(White.on(Green).paint(z.deref()).to_string());
-                                    },
-                                    _ => ()
-                                }
-                            }
-                            result.push_str(&line_diff_parts.join(" "));
+                            result.push_str(&word_by_word_diff(y, x, false));
                         }
                         _ => {
-                            result.push_str(&x.split('\n')
-                                .map(|line| Green.paint(format!("+{}", line)).to_string())
-                                .collect::<Vec<_>>()
-                                .join("\n"));
+                            result.push_str(&line_diff(&x, Option::Some(Green), '+'));
                         }
                     }
                 }
@@ -154,6 +109,46 @@ fn get_diff(text1: &str, text2: &str) -> String {
 
     result.push_str("----------------------\n");
 
+    result
+}
+
+fn line_diff(lines: &str, color: Option<Colour>, prefix: char) -> String {
+    let format_line = |line: &str| {
+        match color {
+            Option::Some(c) => c.paint(format!("{}{}", prefix, line)).to_string(),
+            Option::None => format!("{}{}", prefix, line)
+        }
+    };
+
+    lines.split('\n').map(format_line)
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn word_by_word_diff(x: &str, y: &str, is_removal: bool) -> String {
+    let mut result = String::with_capacity(x.len() + y.len() + 20);
+    let line_diffs = Changeset::new(x, y, " ").diffs;
+    let base_color = if is_removal { Red } else { Green };
+    result.push_str(&base_color.paint(if is_removal { "-" } else { "+" }).to_string());
+    let mut line_diff_parts = Vec::with_capacity(line_diffs.len());
+    for diff in line_diffs {
+        match diff {
+            Difference::Same(ref z) => if !z.is_empty() {
+                line_diff_parts.push(base_color.paint(z.deref()).to_string());
+            },
+            Difference::Rem(ref z) => if !z.is_empty() {
+                if is_removal {
+                    line_diff_parts.push(White.on(base_color).paint(z.deref()).to_string());
+                }
+            },
+            Difference::Add(ref z) => {
+                if !is_removal {
+                    line_diff_parts.push(White.on(base_color).paint(z.deref()).to_string());
+                }
+            }
+        }
+    }
+    result.push_str(&line_diff_parts.join(" "));
     result
 }
 
