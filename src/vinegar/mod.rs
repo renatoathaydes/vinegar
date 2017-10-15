@@ -1,5 +1,9 @@
 use difference::Changeset;
 
+/// Check whether the given expectations have been met successfully.
+///
+/// If any expectation fails, this function panics with an error message showing why each
+/// expectation failed.
 pub fn check<I>(expects: I)
     where I: IntoIterator<Item=Result<(), String>> {
     let mut failures = Vec::new();
@@ -15,7 +19,7 @@ pub fn check<I>(expects: I)
     }
 }
 
-pub fn get_diff(text1: &str, text2: &str) -> String {
+fn get_diff(text1: &str, text2: &str) -> String {
     use difference::Difference;
     use ansi_term::Colour::{Green, Red, White};
     use std::string::ToString;
