@@ -2,6 +2,8 @@ use difference::Changeset;
 
 /// Check whether the given expectations have been met successfully.
 ///
+/// # Panics
+///
 /// If any expectation fails, this function panics with an error message showing why each
 /// expectation failed.
 pub fn check<I>(expects: I)

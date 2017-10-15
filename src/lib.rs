@@ -78,10 +78,10 @@
 //! # }
 //! ```
 //!
-//! Results in the diff (not colorized here, but see the
+//! Results in the diff (see the
 //! [README](https://github.com/renatoathaydes/vinegar) page for screenshots):
 //!
-//! ```text
+//! <pre>
 //! * Condition failed: { "Hello\nworld" } == { "Ola\nmundo" }
 //!                     ------------------    ----------------
 //!                            |                     |
@@ -91,12 +91,12 @@
 //!                            Hello
 //!                            world
 //! ----- Difference -----
-//! -Hello
-//! -world
-//! +Ola
-//! +mundo
+//! <span style="color:red;">-Hello</span>
+//! <span style="color:red;">-world</span>
+//! <span style="color:green;">+Ola</span>
+//! <span style="color:green;">+mundo</span>
 //! ----------------------
-//! ```
+//! </pre>
 //!
 
 #![crate_name = "vinegar"]
