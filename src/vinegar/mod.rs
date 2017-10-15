@@ -1,4 +1,4 @@
-use difference::diff;
+use difference::Changeset;
 
 pub fn check<I>(expects: I)
     where I: IntoIterator<Item=Result<(), String>> {
@@ -28,7 +28,7 @@ pub fn get_diff(text1: &str, text2: &str) -> String {
         WithNewLine
     }
 
-    let (_, differences) = diff(text1, text2, "\n");
+    let differences = Changeset::new(text1, text2, "\n").diffs;
     let diff_pairs = differences.windows(2);
     let mut result = String::with_capacity(text1.len() + text2.len());
     let mut second_iteration: SecondIteration;
@@ -43,30 +43,46 @@ pub fn get_diff(text1: &str, text2: &str) -> String {
             Difference::Same(ref x) => if x.is_empty() {
                 second_iteration = SecondIteration::SkipNoNewLine;
             } else {
-                result.push_str(x);
+                result.push_str(&x.split('\n')
+                    .map(|line| format!(" {}", line))
+                    .collect::<Vec<_>>()
+                    .join("\n"));
                 second_iteration = SecondIteration::SkipWithNewLine;
             },
             Difference::Rem(ref x) => {
-                match *current {
-                    Difference::Add(ref y) => {
-                        let (_, line_diffs) = diff(x, y, " ");
-                        result.push_str(&Red.paint("-").to_string());
-                        let mut line_diff_parts = Vec::with_capacity(line_diffs.len());
-                        for diff in line_diffs {
-                            match diff {
-                                Difference::Same(ref z) => if !z.is_empty() {
-                                    line_diff_parts.push(Red.paint(z.deref()).to_string());
-                                },
-                                Difference::Rem(ref z) => if !z.is_empty() {
-                                    line_diff_parts.push(White.on(Red).paint(z.deref()).to_string());
-                                },
-                                _ => ()
+                let x_lines = x.split('\n').collect::<Vec<_>>();
+                if x_lines.len() > 1 {
+                    // several lines included in Rem, show them without line-by-line diff
+                    result.push_str(&x_lines.iter()
+                        .map(|line| Red.paint(format!("-{}", line)).to_string())
+                        .collect::<Vec<_>>()
+                        .join("\n"));
+                } else {
+                    // show single-line diff
+                    match *current {
+                        Difference::Add(ref y) => {
+                            let line_diffs = Changeset::new(x, y, " ").diffs;
+                            result.push_str(&Red.paint("-").to_string());
+                            let mut line_diff_parts = Vec::with_capacity(line_diffs.len());
+                            for diff in line_diffs {
+                                match diff {
+                                    Difference::Same(ref z) => if !z.is_empty() {
+                                        line_diff_parts.push(Red.paint(z.deref()).to_string());
+                                    },
+                                    Difference::Rem(ref z) => if !z.is_empty() {
+                                        line_diff_parts.push(White.on(Red).paint(z.deref()).to_string());
+                                    },
+                                    _ => ()
+                                }
                             }
+                            result.push_str(&line_diff_parts.join(" "));
                         }
-                        result.push_str(&line_diff_parts.join(" "));
-                    }
-                    _ => {
-                        result.push_str(&Red.paint(format!("{}{}", "-", x)).to_string());
+                        _ => {
+                            result.push_str(&x.split('\n')
+                                .map(|line| Red.paint(format!("-{}", line)).to_string())
+                                .collect::<Vec<_>>()
+                                .join("\n"));
+                        }
                     }
                 }
                 second_iteration = SecondIteration::WithNewLine;
@@ -89,26 +105,39 @@ pub fn get_diff(text1: &str, text2: &str) -> String {
         match *current {
             Difference::Same(_) => (),
             Difference::Add(ref x) => {
-                match *prev {
-                    Difference::Rem(ref y) => {
-                        let (_, line_diffs) = diff(y, x, " ");
-                        result.push_str(&Green.paint("+").to_string());
-                        let mut line_diff_parts = Vec::with_capacity(line_diffs.len());
-                        for diff in line_diffs {
-                            match diff {
-                                Difference::Same(ref z) => if !z.is_empty() {
-                                    line_diff_parts.push(Green.paint(z.deref()).to_string());
-                                },
-                                Difference::Add(ref z) => if !z.is_empty() {
-                                    line_diff_parts.push(White.on(Green).paint(z.deref()).to_string());
-                                },
-                                _ => ()
+                let x_lines = x.split('\n').collect::<Vec<_>>();
+                if x_lines.len() > 1 {
+                    // several lines included in Rem, show them without line-by-line diff
+                    result.push_str(&x_lines.iter()
+                        .map(|line| Green.paint(format!("+{}", line)).to_string())
+                        .collect::<Vec<_>>()
+                        .join("\n"));
+                } else {
+                    // show single-line diff
+                    match *prev {
+                        Difference::Rem(ref y) => {
+                            let line_diffs = Changeset::new(y, x, " ").diffs;
+                            result.push_str(&Green.paint("+").to_string());
+                            let mut line_diff_parts = Vec::with_capacity(line_diffs.len());
+                            for diff in line_diffs {
+                                match diff {
+                                    Difference::Same(ref z) => if !z.is_empty() {
+                                        line_diff_parts.push(Green.paint(z.deref()).to_string());
+                                    },
+                                    Difference::Add(ref z) => if !z.is_empty() {
+                                        line_diff_parts.push(White.on(Green).paint(z.deref()).to_string());
+                                    },
+                                    _ => ()
+                                }
                             }
+                            result.push_str(&line_diff_parts.join(" "));
                         }
-                        result.push_str(&line_diff_parts.join(" "));
-                    }
-                    _ => {
-                        result.push_str(&Green.paint(format!("{}{}", "+", x)).to_string());
+                        _ => {
+                            result.push_str(&x.split('\n')
+                                .map(|line| Green.paint(format!("+{}", line)).to_string())
+                                .collect::<Vec<_>>()
+                                .join("\n"));
+                        }
                     }
                 }
                 result.push('\n');
