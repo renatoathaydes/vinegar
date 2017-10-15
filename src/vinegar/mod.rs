@@ -229,13 +229,28 @@ macro_rules! expect {
 
 }
 
+///
+/// Create an expectation that can be checked with [`check`][check].
+///
+/// A call of the form `expect_eq!(a, b)` is just an alias for `expect!({ a } == { b })`.
+///
+/// [check]: vinegar/fn.check.html
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use] extern crate vinegar;
+/// # fn main() {
+/// use vinegar::vinegar::check;
+/// check(vec![
+///     expect_eq!(2 + 2, 4),
+///     expect_eq!("Hello world", &format!("{} {}", "Hello", "world"))
+/// ]);
+/// # }
+/// ```
 #[macro_export]
 macro_rules! expect_eq {
     ($a:expr, $b: expr) => {{
-        if $a == $b {
-            Result::Ok(())
-        } else {
-            Result::Err(format!("Equality failed: {:?} != {:?}", $a, $b))
-        }
+        expect!({ $a } == { $b })
     }}
 }
