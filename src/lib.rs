@@ -117,13 +117,24 @@ mod tests {
     use vinegar::check;
     use ansi_term::Color::{Red, Green, White};
 
+    /// Compare strings after removing trailing whitespaces from all lines
+    fn assert_eq_multiline(left: &str, right: &str) {
+        let l = left.split('\n').map(|line| line.trim_right())
+            .collect::<Vec<_>>()
+            .join("\n");
+        let r = right.split('\n').map(|line| line.trim_right())
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        assert_eq!(l, r);
+    }
 
     #[test]
     fn use_check() {
         // simple test: just check some expectations:
         check(vec![
             expect_eq!(2 + 2, 4),
-            expect!(2 + 2 == 4),
+            expect!({ 2 + 2 } == 4),
             expect_eq!("hi", "hi"),
         ]);
 
@@ -150,8 +161,9 @@ mod tests {
     fn expect_block() {
         let one_to_100 = 1..100;
         check(vec![
-            expect!({ one_to_100.len() } > 90),
-            expect!({ &one_to_100 }.len() > 90),
+            expect!({ &one_to_100.len() } > &90),
+            expect!(&(45 * 2) < { &one_to_100.len() }),
+            expect!(7 == { 2 + 5 }),
             expect!({ 2 + 5 } == 7),
             expect!({ 2 + 5 } == { 5 + 2 }),
             expect!({ 2 + 5 } >= { 5 + 2 }),
@@ -160,44 +172,82 @@ mod tests {
     }
 
     #[test]
-    fn expect_block_error() {
+    fn expect_block_error_on_left() {
         let one_to_100 = 1..100;
+        //check(vec![expect!({ one_to_100.len() } > 1000 )]);
         if let Err(msg) = expect!({ one_to_100.len() } > 1000 ) {
-            assert_eq!("\
+            assert_eq_multiline("\
 * Condition failed: { one_to_100.len() } > 1000
                     --------------------
                               |
-                              99\n", msg);
+                              99\n", &msg);
         } else {
             panic!("Should have failed");
         }
 
         if let Err(msg) = expect!({ one_to_100.len() } < 1 ) {
-            assert_eq!("\
+            assert_eq_multiline("\
 * Condition failed: { one_to_100.len() } < 1
                     --------------------
                               |
-                              99\n", msg);
+                              99\n", &msg);
         } else {
             panic!("Should have failed");
         }
 
         if let Err(msg) = expect!({ "hello".len() } > 25 ) {
-            assert_eq!("\
+            assert_eq_multiline("\
 * Condition failed: { \"hello\".len() } > 25
-                    -------------------
-                             |
-                             5\n", msg);
+                    -----------------
+                            |
+                            5\n", &msg);
         } else {
             panic!("Should have failed");
         }
 
         if let Err(msg) = expect!({ "hello".len() } > 5 * 5 ) {
-            assert_eq!("\
+            assert_eq_multiline("\
 * Condition failed: { \"hello\".len() } > 5 * 5
-                    -------------------
-                             |
-                             5\n", msg);
+                    -----------------   -----
+                            |             |
+                            |             25
+                            |
+                            5\n", &msg);
+        } else {
+            panic!("Should have failed");
+        }
+    }
+
+    #[test]
+    fn expect_block_error_on_right() {
+        let one_to_100 = 1..100;
+        //check(vec![expect!(100000000 < { one_to_100.len() })]);
+        if let Err(msg) = expect!(1000 < { one_to_100.len() }) {
+            assert_eq_multiline("\
+* Condition failed: 1000 < { one_to_100.len() }
+                           --------------------
+                                      |
+                                      99\n", &msg);
+        } else {
+            panic!("Should have failed");
+        }
+
+        if let Err(msg) = expect!(1 > { one_to_100.len() } ) {
+            assert_eq_multiline("\
+* Condition failed: 1 > { one_to_100.len() }
+                        --------------------
+                                  |
+                                  99\n", &msg);
+        } else {
+            panic!("Should have failed");
+        }
+
+        if let Err(msg) = expect!(25 < { "hello".len() }) {
+            assert_eq_multiline("\
+* Condition failed: 25 < { \"hello\".len() }
+                         -----------------
+                                  |
+                                  5\n", &msg);
         } else {
             panic!("Should have failed");
         }
@@ -208,25 +258,25 @@ mod tests {
         let one_to_100 = 1..100;
 
         if let Err(msg) = expect!({ one_to_100.len() } > { 2000 + 22 }) {
-            assert_eq!("\
+            assert_eq_multiline("\
 * Condition failed: { one_to_100.len() } > { 2000 + 22 }
                     --------------------   -------------
                               |                   |
                               |                   2022
                               |
-                              99\n", msg);
+                              99\n", &msg);
         } else {
             panic!("Should have failed");
         };
 
         if let Err(msg) = expect!({ one_to_100.len() } < { 3 * 5 + 2 }) {
-            assert_eq!("\
+            assert_eq_multiline("\
 * Condition failed: { one_to_100.len() } < { 3 * 5 + 2 }
                     --------------------   -------------
                               |                   |
                               |                   17
                               |
-                              99\n", msg);
+                              99\n", &msg);
         } else {
             panic!("Should have failed");
         }
@@ -234,9 +284,9 @@ mod tests {
 
     #[test]
     fn expect_string_eq_error() {
-        //check(vec![expect!({ "hello" } == { "hevvo" })]);
+        // check(vec![expect!({ "hello" } == { "hevvo" })]);
         if let Err(msg) = expect!({ "hello" } == { "hevvo" }) {
-            assert_eq!(format!("\
+            assert_eq_multiline(&format!("\
 * Condition failed: {{ \"hello\" }} == {{ \"hevvo\" }}
                     -----------    -----------
                          |              |
@@ -247,7 +297,7 @@ mod tests {
 {}{}
 {}{}
 ----------------------\n", Red.paint("-"), White.on(Red).paint("hello"),
-                               Green.paint("+"), White.on(Green).paint("hevvo")), msg);
+                                         Green.paint("+"), White.on(Green).paint("hevvo")), &msg);
         } else {
             panic!("Should have failed");
         }
@@ -256,13 +306,13 @@ mod tests {
     #[test]
     fn expect_string_neq_error() {
         if let Err(msg) = expect!({ "hello" } != { "hello" }) {
-            assert_eq!("\
+            assert_eq_multiline("\
 * Condition failed: { \"hello\" } != { \"hello\" }
                     -----------    -----------
                          |              |
                          |              hello
                          |
-                         hello\n", msg);
+                         hello\n", &msg);
         } else {
             panic!("Should have failed");
         }
@@ -273,7 +323,7 @@ mod tests {
         //check(vec![expect!({ "Hello\nworld" } == { "Ola\nmundo" })]);
 
         if let Err(msg) = expect!({ "Hello\nworld" } == { "Ola\nmundo" }) {
-            assert_eq!(format!("\
+            assert_eq_multiline(&format!("\
 * Condition failed: {{ \"Hello\\nworld\" }} == {{ \"Ola\\nmundo\" }}
                     ------------------    ----------------
                              |                     |
@@ -288,11 +338,11 @@ mod tests {
 {}
 {}
 ----------------------\n",
-                               ["", &Red.paint("-Hello").to_string()].join(""),
-                               ["", &Red.paint("-world").to_string()].join(""),
-                               ["", &Green.paint("+Ola").to_string()].join(""),
-                               ["", &Green.paint("+mundo").to_string()].join(""),
-            ), msg);
+                                         ["", &Red.paint("-Hello").to_string()].join(""),
+                                         ["", &Red.paint("-world").to_string()].join(""),
+                                         ["", &Green.paint("+Ola").to_string()].join(""),
+                                         ["", &Green.paint("+mundo").to_string()].join(""),
+            ), &msg);
         } else {
             panic!("Should have failed");
         }
@@ -313,7 +363,7 @@ mod tests {
         // check(vec![expect!({ text1 } == { text2 })]);
 
         if let Err(msg) = expect!({ text1 } == { text2 }) {
-            assert_eq!(format!("\
+            assert_eq_multiline(&format!("\
 * Condition failed: {{ text1 }} == {{ text2 }}
                     ---------    ---------
                         |            |
@@ -334,18 +384,18 @@ mod tests {
 {}
 {}
 ----------------------\n",
-                               [&Red.paint("-").to_string(), &Red.paint("I wrote this").to_string(), " ",
-                                   &White.on(Red).paint("library").to_string(), " ",
-                                   &Red.paint("here,").to_string()].join(""),
-                               [&Green.paint("+").to_string(), &Green.paint("I wrote this").to_string(), " ",
-                                   &White.on(Green).paint("documentation").to_string(), " ",
-                                   &Green.paint("here,").to_string()].join(""),
-                               [&Red.paint("-").to_string(), &Red.paint("(It's").to_string(),
-                                   " ", &Red.paint("true).").to_string()].join(""),
-                               [&Green.paint("+").to_string(), &Green.paint("(It's").to_string(),
-                                   " ", &White.on(Green).paint("quite").to_string(),
-                                   " ", &Green.paint("true).").to_string()].join(""))
-                       , msg);
+                                         [&Red.paint("-").to_string(), &Red.paint("I wrote this").to_string(), " ",
+                                             &White.on(Red).paint("library").to_string(), " ",
+                                             &Red.paint("here,").to_string()].join(""),
+                                         [&Green.paint("+").to_string(), &Green.paint("I wrote this").to_string(), " ",
+                                             &White.on(Green).paint("documentation").to_string(), " ",
+                                             &Green.paint("here,").to_string()].join(""),
+                                         [&Red.paint("-").to_string(), &Red.paint("(It's").to_string(),
+                                             " ", &Red.paint("true).").to_string()].join(""),
+                                         [&Green.paint("+").to_string(), &Green.paint("(It's").to_string(),
+                                             " ", &White.on(Green).paint("quite").to_string(),
+                                             " ", &Green.paint("true).").to_string()].join(""))
+                                , &msg);
         } else {
             panic!("Should have failed");
         }

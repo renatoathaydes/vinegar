@@ -5,6 +5,37 @@ use ansi_term::Colour::{Green, Red, White};
 use std::string::ToString;
 use std::ops::Deref;
 
+enum ValuesToPrint {
+    Both,
+    First,
+    Second,
+    None
+
+}
+
+impl ValuesToPrint {
+    fn has_first(&self) -> bool {
+        match *self {
+            ValuesToPrint::Both | ValuesToPrint::First => true,
+            _ => false
+        }
+    }
+
+    fn has_second(&self) -> bool {
+        match *self {
+            ValuesToPrint::Both | ValuesToPrint::Second => true,
+            _ => false,
+        }
+    }
+
+    fn has_both(&self) -> bool {
+        match *self {
+            ValuesToPrint::Both => true,
+            _ => false
+        }
+    }
+}
+
 /// Check whether the given expectations have been met successfully.
 ///
 /// # Panics
@@ -153,41 +184,91 @@ fn word_by_word_diff(x: &str, y: &str, is_removal: bool) -> String {
 }
 
 #[doc(hidden)]
-pub fn internal_build_error(bs: &str, be: &str, op: &str, astr: &str, ae: &str) -> String {
-    let spaces = "                    ";
-    // quotes are rendered with an escape character, so we need to add to the length
-    let belen = be.len();
-    let be_underlines = "-".repeat(belen);
-    let be_arrow_spaces = " ".repeat(belen / 2);
+pub fn internal_build_error(val1: &str, expr1: &str, op: &str, val2: &str, expr2: &str) -> String {
+    let intro = "* Condition failed: ";
 
-    let aelen = ae.len();
-    let ae_underlines = "-".repeat(aelen);
-    let ae_arrow_spaces = " ".repeat(aelen / 2);
+    let values_to_print: ValuesToPrint = if expr1 == val1 {
+        if expr2 == val2 { ValuesToPrint::None } else { ValuesToPrint::Second }
+    } else {
+        if expr2 == val2 { ValuesToPrint::First } else { ValuesToPrint::Both }
+    };
+
+    let spaces = " ".repeat(intro.len());
+    // quotes are rendered with an escape character, so we need to add to the length
+    let expr1_len = expr1.len();
+    let val1_underlines = (if values_to_print.has_first() { "-" } else { " " }).repeat(expr1_len);
+    let val1_arrow_spaces = " ".repeat(expr1_len / 2);
+    let val1_arrow = if values_to_print.has_first() { "|" } else { " " };
+
+    let expr2_len = expr2.len();
+    let val2_underlines = (if values_to_print.has_second() { "-" } else { " " }).repeat(expr2_len);
+    let val2_arrow_spaces = " ".repeat(expr2_len / 2);
+    let val2_arrow = if values_to_print.has_second() { "|" } else { " " };
 
     let op_spaces = " ".repeat(op.len() + 2);
 
-    let last_lines_prefix = format!("{}{}", spaces, be_arrow_spaces);
-    let first_lines_prefix = format!("{}|{}{}{}",
-                                     last_lines_prefix, be_arrow_spaces, op_spaces, ae_arrow_spaces);
+    let last_lines_prefix = format!("{}{}", spaces, val1_arrow_spaces);
+    let first_lines_prefix = format!("{}{}{}{}{}", last_lines_prefix, val1_arrow,
+                                     val1_arrow_spaces, op_spaces, val2_arrow_spaces);
 
-    let line1 = format!("{}{}{}{}", spaces, be_underlines, op_spaces, ae_underlines);
-    let line2 = format!("{}|", first_lines_prefix);
-    let line3 = astr.split('\n')
-        .map(|line| format!("{}{}", first_lines_prefix, line))
-        .collect::<Vec<_>>()
-        .join("\n");
-    let line4 = format!("{}|", last_lines_prefix);
-    let val_line = bs.split('\n')
-        .map(|line| format!("{}{}", last_lines_prefix, line))
-        .collect::<Vec<_>>()
-        .join("\n");
+    let underlines_line = format!("{}{}{}{}\n", spaces, val1_underlines, op_spaces, val2_underlines);
+    let both_arrows_line = format!("{}{}\n", first_lines_prefix, val2_arrow);
+    let val2_lines = if values_to_print.has_second() {
+        format!("{}\n", val2.split('\n')
+            .map(|line| format!("{}{}", first_lines_prefix, line))
+            .collect::<Vec<_>>()
+            .join("\n"))
+    } else {
+        String::new()
+    };
+    let line4 = if values_to_print.has_both() {
+        format!("{}{}\n", last_lines_prefix, val1_arrow)
+    } else {
+        String::new()
+    };
+    let val1_lines = if values_to_print.has_first() {
+        format!("{}\n", val1.split('\n')
+            .map(|line| format!("{}{}", last_lines_prefix, line))
+            .collect::<Vec<_>>()
+            .join("\n"))
+    } else {
+        String::new()
+    };
 
-    let error_diff = if op == "==" { get_diff(bs, astr) } else { String::new() };
+    let error_diff = if op == "==" { get_diff(val1, val2) } else { String::new() };
 
-    format!("* Condition failed: {} {} {}\n{}\n{}\n{}\n{}\n{}\n{}",
-            be, op, ae, line1, line2, line3, line4, val_line, error_diff)
+    format!("{}{} {} {}\n{}{}{}{}{}{}",
+            intro, expr1, op, expr2, underlines_line,
+            both_arrows_line, val2_lines, line4, val1_lines, error_diff)
 }
 
+
+///
+/// Create a general expectation that can be checked with [`check`][check].
+///
+/// This macro accepts expressions or blocks on either side of a boolean operator.
+///
+/// Code blocks on both sides should be preferred because that allows `vinegar` to run
+/// the blocks and resolve a value which can be shown in the error message in case of failure,
+/// which makes it much easier to understand why a test may have failed.
+/// Also, if the `==` operator is used, a diff between the values can be shown.
+///
+/// [check]: vinegar/fn.check.html
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use] extern crate vinegar;
+/// # fn main() {
+/// use vinegar::vinegar::check;
+/// check(vec![
+///     expect!({ 2 + 2 } == 4),
+///     expect!({ 2 * 5 } == { 5 * 2 }),
+///     expect!({ 2 * 5 } < { 3 * 5 }),
+///     expect!("Hello world" == { format!("{} {}", "Hello", "world") })
+/// ]);
+/// # }
+///
 #[macro_export]
 macro_rules! expect {
 
@@ -201,21 +282,23 @@ macro_rules! expect {
         }
     }};
 
-    ($b:block $($a:tt)+) => {{
-        if $b $($a)* {
+    ($b:tt $op:tt $a:block) => {{
+        if $b $op $a {
             Result::Ok(())
         } else {
-            let bs = format!("{:?}", $b);
-            let be = stringify!($b);
-            // quotes are rendered with an escape character, so we need to add to the length
-            let belen = be.len() + be.matches("\"").count();
-            let spaces = "                    ";
-            let underlines = "-".repeat(belen);
-            let arrow_line_spaces = " ".repeat(belen / 2);
-            let arrow_line = format!("{}{}|", spaces, arrow_line_spaces);
-            let val_line = format!("{}{}{}", spaces, arrow_line_spaces, bs);
-            Result::Err(format!("* Condition failed: {} {}\n{}{}\n{}\n{}\n",
-                be, stringify!($($a)*), spaces, underlines, arrow_line, val_line))
+            Result::Err($crate::vinegar::internal_build_error(
+                &format!("{}", $b), stringify!($b), stringify!($op),
+                &format!("{}", $a), stringify!($a)))
+        }
+    }};
+
+    ($b:block $op:tt $($a:tt)+) => {{
+        if $b $op $($a)* {
+            Result::Ok(())
+        } else {
+            Result::Err($crate::vinegar::internal_build_error(
+                &format!("{}", $b), stringify!($b), stringify!($op),
+                &format!("{}", $($a)*), stringify!($($a)*)))
         }
     }};
 
@@ -230,7 +313,7 @@ macro_rules! expect {
 }
 
 ///
-/// Create an expectation that can be checked with [`check`][check].
+/// Create an equality expectation that can be checked with [`check`][check].
 ///
 /// A call of the form `expect_eq!(a, b)` is just an alias for `expect!({ a } == { b })`.
 ///
